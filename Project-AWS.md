@@ -32,20 +32,6 @@ process, analyze, share, act for this analysis.
 - Sorting and filtering for interested data into seperate table.
 
 ``` r
-install.packages("tidyverse")
-```
-
-    ## Installing package into '/cloud/lib/x86_64-pc-linux-gnu-library/4.3'
-    ## (as 'lib' is unspecified)
-
-``` r
-install.packages("reshape")
-```
-
-    ## Installing package into '/cloud/lib/x86_64-pc-linux-gnu-library/4.3'
-    ## (as 'lib' is unspecified)
-
-``` r
 library(tidyverse)
 ```
 
@@ -54,8 +40,7 @@ library(tidyverse)
     ## ✔ forcats   1.0.0     ✔ stringr   1.5.1
     ## ✔ ggplot2   3.4.4     ✔ tibble    3.2.1
     ## ✔ lubridate 1.9.3     ✔ tidyr     1.3.0
-    ## ✔ purrr     1.0.2
-
+    ## ✔ purrr     1.0.2     
     ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
     ## ✖ dplyr::filter() masks stats::filter()
     ## ✖ dplyr::lag()    masks stats::lag()
@@ -137,7 +122,7 @@ summary(df_database)
     ##    Record.ID      Incident.Year  Incident.Month    Incident.Day  
     ##  Min.   :  1000   Min.   :1990   Min.   : 1.000   Min.   : 1.00  
     ##  1st Qu.:205412   1st Qu.:2001   1st Qu.: 5.000   1st Qu.: 8.00  
-    ##  Median :249102   Median :2007   Median : 8.000   Median :16.00  
+    ##  Median :249103   Median :2007   Median : 8.000   Median :16.00  
     ##  Mean   :241204   Mean   :2006   Mean   : 7.172   Mean   :15.71  
     ##  3rd Qu.:322592   3rd Qu.:2012   3rd Qu.: 9.000   3rd Qu.:23.00  
     ##  Max.   :367445   Max.   :2015   Max.   :12.000   Max.   :31.00  

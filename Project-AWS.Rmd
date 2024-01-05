@@ -1,8 +1,13 @@
 ---
 title: "Airplane-wildlife Strikes Analysis"
+knit: (function(input_file, encoding) {
+      out_dir <- 'docs';
+      rmarkdown::render(input_file,
+      encoding=encoding,
+      output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 author: "Pongsatorn Konggate"
 date: "2024-01-02"
-output: rmarkdown::github_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -28,8 +33,6 @@ This is a project for Google Data Analytics course by Coursera. Which will mostl
 -   Sorting and filtering for interested data into seperate table.
 
 ```{r loading package}
-install.packages("tidyverse")
-install.packages("reshape")
 library(tidyverse)
 library(reshape)
 library(RColorBrewer)

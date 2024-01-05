@@ -1,0 +1,257 @@
+---
+title: "Airplane-wildlife Strikes Analysis"
+author: "Pongsatorn Konggate"
+date: "2024-01-02"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This is a project for Google Data Analytics course by Coursera. Which will mostly use the steps of the data analysis process: ask, prepare, process, analyze, share, act for this analysis.
+
+## Task to investigate
+
+-   **Trend of airplane and wildlife collision and how to reduce incidents.**
+
+## Data
+
+-   **Data Source**: This dataset is from kaggle's [Aircraft Wildlife Strikes, 1990-2015](https://www.kaggle.com/datasets/faa/wildlife-strikes) under [CC0 license](https://creativecommons.org/publicdomain/zero/1.0/). With the original data source from [FAA Wildlife Stirke Database](https://wildlife.faa.gov/home) which contains records of voluntary reported wildlife strikes.
+
+## Data cleaning, manipulation and analysis
+
+-   We are using SQL to preprocess data in this following steps
+-   Looking at Schema to learn about data type and detail of data of each fields to familiarize with data.
+-   Sorting and filtering for interested data into seperate table.
+
+```{r loading package}
+install.packages("tidyverse")
+install.packages("reshape")
+library(tidyverse)
+library(reshape)
+library(RColorBrewer)
+library(plyr)
+```
+
+```{r loading database}
+df_database <- data.frame(read_csv("database.csv"))
+```
+
+```{r Looking at dimension of database}
+dim(df_database)
+```
+
+```{r Looking at info of database}
+summary(df_database)
+```
+
+```{r Looking at missing value}
+colSums(is.na(df_database))
+```
+
+There are many missing value but we can't just delete row with null value because another column in that row contain valuable information we will deal with it case by case.
+
+```{r Looking at duplicate value}
+length(unique(df_database[["Record.ID"]]))
+```
+
+Length of unique record id is equal to length of database so there are no duplicate record.
+
+Next we will look at species of wildlife that cause incident most often and most damage.
+
+``` sql
+SELECT Incident_Year, count(Incident_Year) as Count
+FROM `aircraft-wildlife-strikes.aw_strikes.aircraft wildlife strikes`
+where Aircraft_Type = 'A'
+group by Incident_Year
+order by Incident_Year
+```
+
+[Use aggregation function Count() to count number of incident occur each year (Incident_Year don't have null value)\
+We will focus on airplane by filtering use Aircraft_Type='A']{style="color:purple"}.
+
+```{r}
+df_incidents_year <- data.frame(read_csv("Incidents_per_year.csv", show_col_types = FALSE))
+
+ggplot(data=df_incidents_year, aes(x=factor(Incident_Year), y=Count, group=1)) +
+  geom_line() +  scale_fill_brewer(palette = "Blues") + 
+  labs(title="Incidents occur per year") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=7))
+```
+
+-   Insight
+
+    Incident in creasing by year that may come from increase in number of flights, increase in populations of the wildlifes in the nearby area.
+
+Next we will look at species that cause most incidents.
+
+``` sql
+SELECT Species_Name,
+       count(*) Count,
+       sum(Radome_Damage) Radome_Damage,      ---sum of damage group by species
+       sum(Windshield_Damage) Windshield_Damage,
+       sum(Nose_Damage) Nose_Damage, 
+       sum(Engine1_Damage) Engine1_Damage, 
+       sum(Engine2_Damage) Engine2_Damage,
+       sum(Engine3_Damage) Engine3_Damage, 
+       sum(Engine4_Damage) Engine4_Damage, 
+       sum(Propeller_Damage) Propeller_Damage,
+       sum(Wing_or_Rotor_Damage) Wing_or_Rotor_Damage, 
+       sum(Fuselage_Damage) Fuselage_Damage, 
+       sum(Landing_Gear_Damage) Landing_Gear_Damage,
+       sum(Tail_Damage) Tail_Damage, 
+       sum(Lights_Damage) Lights_Damage, 
+       sum(Other_Damage) Other_Damage
+FROM `aircraft-wildlife-strikes.aw_strikes.aircraft wildlife strikes`
+WHERE Aircraft_Type = 'A'
+GROUP BY Species_Name
+ORDER BY Count DESC
+```
+
+```{r}
+df_species_dmg <- data.frame(read_csv("Species_damage.csv", show_col_types = FALSE))
+
+ggplot(data=df_species_dmg[1:10,],
+       aes(x=forcats::fct_reorder(Species_Name, desc(Count)),
+           y=Count, fill=Species_Name)) + 
+  geom_col() + 
+  labs(x="Species_Name", title="Incidents occur in each species") +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=7),
+        legend.position="none")
+```
+
+-   Insight
+
+    Most incidents are cause by unknown birds (some of its is send to identify), and most incident that cuase by identifiable birds is gull. Large birds incident is significant lower because it is easier to spot and low in population compare to small and medium birds, and small, medium birds tend to stay as group which has much more chance to cause incidents.
+
+When it come to birds maybe the migration of birds also affect in frequency of incidents let see incedents by month.
+
+``` sql
+SELECT Incident_Month, count(Incident_Month) as Count
+FROM `aircraft-wildlife-strikes.aw_strikes.aircraft wildlife strikes`
+where Aircraft_Type = 'A'
+group by Incident_Month
+order by Incident_Month
+```
+
+```{r}
+df_incident_m <- data.frame(read_csv("Incident_month.csv", show_col_types = FALSE))
+ggplot(data=df_incident_m, aes(x=Incident_Month, y=Count)) + 
+  geom_line() + geom_point() + 
+  geom_text(aes(label=Count), vjust=-0.5) + 
+  labs(x="Month", title="Incidents occur per month") + 
+  scale_x_continuous(n.breaks = 12)
+```
+
+-   Insight
+
+    Incidents occur by month is significant higher at May to October with the peak at 18212 incidents in September, incidents occur much lower in December to February (winter Season). Since each bird species migrating at a different period of time further investigation is needed in order to see pattern in the individual bird species.
+
+Next let see percentage of damage that cause by each species
+
+```{r}
+df1 <- data.frame(df_species_dmg)
+df2 <- df1[,3:16]/df1[,2]*100      # Calculate into percentage.
+df1[,3:16] <- df2
+df1[2] <- NULL                     # Drop count column
+df3 <- melt(df1[1:10, ], id.vars="Species_Name", variable.names="Damage_parts")
+#change dataframe from wide to long using melt fuction
+
+ggplot(data=df3, aes(x=Species_Name, y=value, fill=variable)) + 
+  geom_col(color="black") +
+  labs(x="Species Name",y="%",
+       title="Probability that specific species will cause damage") + 
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=6),
+        legend.text=element_text(size=7), legend.key.size = unit(0.3, "cm"))
+```
+
+[We calculate percentage of damage in each part (damage part/number of incident) by slicing dataframe and calculate Then we change dataframe from wide to long using melt function to make it easier to plot]{style="color:purple"}.
+
+-   Insight
+
+    At the glance we can see that most damage come from large birds at 45% and overall damage occur at wing/rotor, Engine1, Engine2 with radome damage by large bird is much higher compare to other type of birds. In order to reduce damage we must focus on detection of medium to large birds.
+
+Next let look at incidents occur at each flight phase.
+
+``` sql
+SELECT Flight_Phase,    
+       CAST(AVG(Height) AS INT) AS Height,
+       CAST(AVG(Speed) AS INT) AS Speed, 
+       count(*) AS Count_Incident
+FROM `aircraft-wildlife-strikes.aw_strikes.aircraft wildlife strikes`
+WHERE Aircraft_Type = 'A' and Flight_Phase is not null  ---filter null in flight phase out
+GROUP BY Flight_Phase
+ORDER BY Count_Incident DESC
+```
+
+```{r}
+df_flight_p <- data.frame(read_csv("Phase_Height.csv", show_col_types = FALSE))
+df_flight_p <- cbind(Index=c(7, 2, 8, 3, 6, 4, 9, 5, 1, 10, 11,  12),df_flight_p)
+#Add index column for easier to rearrange flight phase
+Palette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+
+#plot incident relative to height(feet above ground level)
+ggplot(data=df_flight_p, aes(forcats::fct_reorder(Flight_Phase, Index), 
+                             y=Count_Incident, group=1)) + 
+  geom_line() + geom_point(aes(color=Height), size=5) + 
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=7)) +
+  scale_colour_gradientn(colours = Palette(100), limits=c(0, 10000)) + 
+  labs(x="Flight Phase", color="Height\n (feet)",
+       title="Incident occur at each flight phase respective to height") + 
+  geom_text(aes(label=Count_Incident), vjust=-0.3, hjust=-0.3 , size=3)
+
+#plot incident relative to speed(knot)
+ggplot(data=df_flight_p, aes(forcats::fct_reorder(Flight_Phase, Index), 
+                             y=Count_Incident, group=1)) + 
+  geom_line() + geom_point(aes(color=Speed), size=5) + 
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=7)) +
+  scale_colour_gradientn(colours = Palette(100), limits=c(0, 300)) + 
+  labs(x="Flight Phase" ,y="Speed\n(knot)", 
+       title="Incident occur at each flight phase respective to speed") + 
+  geom_text(aes(label=Count_Incident), vjust=-0.3, hjust=-0.3 , size=3)
+
+```
+
+[We add number index into dataframe and use it as reference in order to rearrange plot]{style="color:purple"}.
+
+Let compare data distribution of height from 'Climb' to 'Approach' phase.
+
+```{r}
+df_ca <- data.frame(read_csv("FPH.csv", show_col_types = FALSE))
+
+ggplot(data=df_ca, 
+       aes(x=Height, color=Flight_Phase, fill=Flight_Phase)) +
+  geom_density(alpha=0.1) +
+  xlim(0,20000) +
+  labs(x="Height (feet)" , 
+       title="KDE plot",
+       subtitle="Density that incidents occur during 'Approach' and 'Climb' phase")
+
+ggplot(data=df_ca,aes(x=Height)) +
+  geom_histogram(data=subset(df_ca, Flight_Phase==("APPROACH")),
+                 binwidth=20) +
+  xlim(0,3000)
+
+ggplot(data=df_ca,aes(x=Height)) +
+  geom_histogram(data=subset(df_ca, Flight_Phase==("APPROACH")),
+                 binwidth=20) +
+  xlim(0,500)
+```
+
+-   Insight
+
+    Most incidents occur at low attitude around 0-1500 feet, while the incidents occur significant lower at higher attitude. What is interesting is incident occur at 'Approach' phase is twice as much compare to 'Climb' phase which occur at almost the same height/speed. Maybe from bird's perspective it can notice airplane sooner when airplane still in 'Take-off run' phase (higher airplane sound and visibility at low attitude but lower sound and visibility at higher attitude) Data of approach and climb phase are skewd.
+
+    We can see from histogram plot that data around 0-100 feet is oddly high, because the dataset is voluntary report and it didn't define height of each phase, that mean some of incidents occur at 0 feet may reported as 'Approach' instead of 'Landing'. Still, the fact that most incidents occur at low attitude still hold true.
+
+# Key finding
+
+-   Most incident come from small and medium birds.
+-   Most damage come from large birds follow by medium birds.
+-   Incidents occur in December to February is significant lower from the rest of the year.
+    -   Each bird has different migration period, further exploration is needed in order to understand population of specific bird around airplane travel path during each season.
+-   Most incident occur during 'Approach' phase follow by 'Take off run', 'Landing roll' and 'climb phase'.
+    -   Incident occur in 'Approach' phase is significant higher compare to another phase ,further exploration about 'Approach' phase such as vision from airplane and bird perspective in order to reduce incident in this phase.

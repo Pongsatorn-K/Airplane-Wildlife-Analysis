@@ -16,15 +16,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-This is a project for Google Data Analytics course by Coursera. Which will mostly use the steps of the data analysis process: ask, prepare, process, analyze, share, act for this analysis.
+This is a project for Google Data Analytics course by Coursera. Which will mostly use the steps of the data analysis process: ask, prepare, process, analyze, share, act for this analysis. Topic of analysis will focus on airplane and wildlifes collision which can cause damage to airplane and in some case cause injuries to passenger or worse, fatalities.
 
 ## Task to investigate
 
--   **Trend of airplane and wildlife collision and how to reduce incidents.**
+-   **Trend of airplane and wildlifes collision and how to reduce incidents.**
 
 ## Data
 
--   **Data Source**: This dataset is from kaggle's [Aircraft Wildlife Strikes, 1990-2015](https://www.kaggle.com/datasets/faa/wildlife-strikes) under [CC0 license](https://creativecommons.org/publicdomain/zero/1.0/). With the original data source from [FAA Wildlife Stirke Database](https://wildlife.faa.gov/home) which contains records of voluntary reported wildlife strikes.
+-   **Data Source**: This dataset is from kaggle's [Aircraft Wildlife Strikes, 1990-2015](https://www.kaggle.com/datasets/faa/wildlife-strikes) under [CC0 license](https://creativecommons.org/publicdomain/zero/1.0/). With the original data source from [FAA Wildlife Stirke Database](https://wildlife.faa.gov/home) which contains records of voluntary reported wildlife strikes in United States.
 
 ## Data cleaning, manipulation and analysis
 
@@ -46,6 +46,10 @@ df_database <- data.frame(read_csv("database.csv"))
 ```{r Looking at dimension of database}
 dim(df_database)
 ```
+```{r Looking at duplicate value}
+length(unique(df_database[["Record.ID"]]))
+```
+Length of unique record id is equal to length of database so there are no duplicate record.
 
 ```{r Looking at info of database}
 summary(df_database)
@@ -56,12 +60,6 @@ colSums(is.na(df_database))
 ```
 
 There are many missing value but we can't just delete row with null value because another column in that row contain valuable information we will deal with it case by case.
-
-```{r Looking at duplicate value}
-length(unique(df_database[["Record.ID"]]))
-```
-
-Length of unique record id is equal to length of database so there are no duplicate record.
 
 Next we will look at species of wildlife that cause incident most often and most damage.
 
@@ -82,12 +80,12 @@ df_incidents_year <- data.frame(read_csv("Incidents_per_year.csv", show_col_type
 ggplot(data=df_incidents_year, aes(x=factor(Incident_Year), y=Count, group=1)) +
   geom_line() +  scale_fill_brewer(palette = "Blues") + 
   labs(title="Incidents occur per year") + 
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=7))
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=1, size=7))
 ```
 
 -   Insight
 
-    Incident in creasing by year that may come from increase in number of flights, increase in populations of the wildlifes in the nearby area.
+    Incident increasing by year that may come from increase in number of flights, increase in populations of the wildlifes in the nearby area.
 
 Next we will look at species that cause most incidents.
 
@@ -145,13 +143,24 @@ df_incident_m <- data.frame(read_csv("Incident_month.csv", show_col_types = FALS
 ggplot(data=df_incident_m, aes(x=Incident_Month, y=Count)) + 
   geom_line() + geom_point() + 
   geom_text(aes(label=Count), vjust=-0.5) + 
-  labs(x="Month", title="Incidents occur per month") + 
-  scale_x_continuous(n.breaks = 12)
+  labs(x="Month", y="Number of incidents", title="Incidents occur per month") + 
+  scale_x_continuous(n.breaks=12)
 ```
-
 -   Insight
 
-    Incidents occur by month is significant higher at May to October with the peak at 18212 incidents in September, incidents occur much lower in December to February (winter Season). Since each bird species migrating at a different period of time further investigation is needed in order to see pattern in the individual bird species.
+    Incidents occur by month is significant higher at May to October with the peak at 18212 incidents in September, incidents occur much lower in December to February (winter Season).Since each bird species migrating at a different period of time further investigation is needed in order to see pattern in the individual bird species. 
+    Let compare incidents by gull and mourning dove.
+```{r}
+df_gd <- data.frame(read_csv("GD.csv", show_col_types = FALSE))
+ggplot(data=df_gd, aes(x=Incident_Month, y=Count, color=Species_Name)) + 
+  geom_line() + geom_point() + 
+  geom_text(aes(label=Count), vjust=-0.5) + 
+  labs(x="Month",y="Number of incidents", title="Incidents per month",
+       subtitle="Incidents cause by Gull and Mourning Dove") + 
+  scale_x_continuous(n.breaks=12)
+```
+Incidents by Gull is peak around 600 incidents in April and October while incidents by Mourning dove is peak at 722 incidents in August, which support migration hypothesis.
+
 
 Next let see percentage of damage that cause by each species
 
@@ -228,20 +237,19 @@ df_ca <- data.frame(read_csv("FPH.csv", show_col_types = FALSE))
 ggplot(data=df_ca, 
        aes(x=Height, color=Flight_Phase, fill=Flight_Phase)) +
   geom_density(alpha=0.1) +
-  xlim(0,20000) +
+  xlim(-2,20000) +
   labs(x="Height (feet)" , 
        title="KDE plot",
        subtitle="Density that incidents occur during 'Approach' and 'Climb' phase")
 
 ggplot(data=df_ca,aes(x=Height)) +
-  geom_histogram(data=subset(df_ca, Flight_Phase==("APPROACH")),
-                 binwidth=20) +
-  xlim(0,3000)
+  geom_histogram(data=subset(df_ca, Flight_Phase==("APPROACH")), binwidth=20) +
+  xlim(-20,3000) +
+  labs(x="Height (feet)", title="Histogram")
 
 ggplot(data=df_ca,aes(x=Height)) +
-  geom_histogram(data=subset(df_ca, Flight_Phase==("APPROACH")),
-                 binwidth=20) +
-  xlim(0,500)
+  geom_histogram(data=subset(df_ca, Flight_Phase==("APPROACH")), binwidth=20) +
+  xlim(-20,500)
 ```
 
 -   Insight
@@ -249,6 +257,23 @@ ggplot(data=df_ca,aes(x=Height)) +
     Most incidents occur at low attitude around 0-1500 feet, while the incidents occur significant lower at higher attitude. What is interesting is incident occur at 'Approach' phase is twice as much compare to 'Climb' phase which occur at almost the same height/speed. Maybe from bird's perspective it can notice airplane sooner when airplane still in 'Take-off run' phase (higher airplane sound and visibility at low attitude but lower sound and visibility at higher attitude) Data of approach and climb phase are skewd.
 
     We can see from histogram plot that data around 0-100 feet is oddly high, because the dataset is voluntary report and it didn't define height of each phase, that mean some of incidents occur at 0 feet may reported as 'Approach' instead of 'Landing'. Still, the fact that most incidents occur at low attitude still hold true.
+    
+[We can manipulate data by define height of each phase and change Flight_Phase according to defined height but it does not seem to get us more information in this analysis.]{style="color:purple"}
+
+
+Next let see distance between airport and location that incidents occur.
+```{r}
+df_dt <- data.frame(read_csv("Distance.csv", show_col_types = FALSE))
+
+ggplot(data=df_dt, 
+      aes(x=Distance)) +
+  geom_histogram(binwidth=0.5, boundary=0) +
+  xlim(0,10) +
+  labs(x="Distance (Nuatical mile)" , 
+      title="Histogram of distance",
+      subtitle="bin=0.5")
+```
+Most incidents happen around airport.
 
 # Key finding
 
@@ -257,4 +282,7 @@ ggplot(data=df_ca,aes(x=Height)) +
 -   Incidents occur in December to February is significant lower from the rest of the year.
     -   Each bird has different migration period, further exploration is needed in order to understand population of specific bird around airplane travel path during each season.
 -   Most incident occur during 'Approach' phase follow by 'Take off run', 'Landing roll' and 'climb phase'.
-    -   Incident occur in 'Approach' phase is significant higher compare to another phase ,further exploration about 'Approach' phase such as vision from airplane and bird perspective in order to reduce incident in this phase.
+    -   Incident occur upon arrival is significant higher compare to departure ,further exploration about 'Approach' phase such as vision from airplane and bird perspective in order to reduce incident in this phase.
+    
+# Conclusion
+- Since most of incidents occur around airport area, habitat management around airport might be an effective strategy to control population of wildlife around airport area. Bird migration further exploration should be conduct in order to handle each habitat of individual species effectively for each season.

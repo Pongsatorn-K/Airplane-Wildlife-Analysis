@@ -11,7 +11,10 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      error = FALSE,
+                      warning = FALSE,
+                      message = FALSE)
 ```
 
 # Introduction
@@ -32,14 +35,14 @@ This is a project for Google Data Analytics course by Coursera. Which will mostl
 -   Looking at Schema to learn about data type and detail of data of each fields to familiarize with data.
 -   Sorting and filtering for interested data into seperate table.
 
-```{r loading package}
+```{r loading library}
 library(tidyverse)
 library(reshape)
 library(RColorBrewer)
 library(plyr)
 ```
 
-```{r loading database}
+```{r loading dataset}
 df_database <- data.frame(read_csv("database.csv"))
 ```
 

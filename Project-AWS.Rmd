@@ -5,8 +5,7 @@ knit: (function(input_file, encoding) {
       rmarkdown::render(input_file,
       encoding=encoding,
       output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
-author: "Pongsatorn Konggate"
-date: "2024-01-02"
+author: "Author: Pongsatorn Konggate"
 output: html_document
 ---
 
@@ -152,17 +151,38 @@ ggplot(data=df_incident_m, aes(x=Incident_Month, y=Count)) +
 -   Insight
 
     Incidents occur by month is significant higher at May to October with the peak at 18212 incidents in September, incidents occur much lower in December to February (winter Season).Since each bird species migrating at a different period of time further investigation is needed in order to see pattern in the individual bird species. 
-    Let compare incidents by gull and mourning dove.
+    Let compare incidents by top 5 known species.
+```sql
+SELECT Incident_Month, Species_Name, Count         
+FROM
+  (
+  SELECT  aws.Incident_Month, aws.Species_Name, Count(*) as Count,
+          aws_dmg.Count as Dmg,
+          DENSE_RANK() OVER(ORDER BY aws_dmg.Count DESC) AS Dmg_Rank --> Ranking specie dmg
+  FROM `aircraft-wildlife-strikes.aw_strikes.aircraft wildlife strikes` as aws
+    INNER JOIN `aircraft-wildlife-strikes.aw_strikes.aws_dmg` as aws_dmg --> previous table
+    ON aws.Species_Name = aws_dmg.Species_Name
+  WHERE aws.Species_Name IS NOT NULL 
+        AND aws.Species_Name NOT LIKE '%UNKNOWN%'   --> Filter out unknown bird
+        AND aws.Aircraft_Type = 'A'
+  GROUP BY aws.Incident_Month, aws.Species_Name, Dmg
+  ORDER BY Dmg DESC
+  )
+WHERE Dmg_Rank < 6
+ORDER BY Dmg_Rank ASC
+```
 ```{r}
-df_gd <- data.frame(read_csv("GD.csv", show_col_types = FALSE))
-ggplot(data=df_gd, aes(x=Incident_Month, y=Count, color=Species_Name)) + 
-  geom_line() + geom_point() + 
-  geom_text(aes(label=Count), vjust=-0.5) + 
+df_top_dmg <- data.frame(read_csv("top5_dmg_month.csv", show_col_types = FALSE))
+
+ggplot(data=df_top_dmg, aes(x=Incident_Month, y=Count, color=Species_Name)) + 
+  geom_line() + 
+  #geom_text(aes(label=Count), vjust=-0.5, size=3) + 
   labs(x="Month",y="Number of incidents", title="Incidents per month",
-       subtitle="Incidents cause by Gull and Mourning Dove") + 
+       subtitle="Incidents cause Top 5 known species") + 
   scale_x_continuous(n.breaks=12)
 ```
-Incidents by Gull is peak around 600 incidents in April and October while incidents by Mourning dove is peak at 722 incidents in August, which support migration hypothesis.
+
+Incidents by Gull is peak around 600 incidents in April and October while incidents by other species is rising during summer with it peak at August and incidents are dropping when enter autumn, which support migration hypothesis.
 
 
 Next let see percentage of damage that cause by each species
@@ -276,6 +296,7 @@ ggplot(data=df_dt,
       title="Histogram of distance",
       subtitle="bin=0.5")
 ```
+
 Most incidents happen around airport.
 
 # Key finding
